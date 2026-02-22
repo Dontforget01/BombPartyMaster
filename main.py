@@ -12,14 +12,12 @@ def main():
     splash = SplashScreen()
     splash.show()
 
-    # ⚠️ VARIABLE GLOBALE → OBLIGATOIRE
     window = MainWindow()
 
     def finish_loading():
         splash.close()
         window.show()
 
-    # durée alignée avec la barre
     QTimer.singleShot(1600, finish_loading)
 
     sys.exit(app.exec())

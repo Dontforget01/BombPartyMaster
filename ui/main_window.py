@@ -24,9 +24,7 @@ def resource_path(relative_path: str) -> str:
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
-# ======================
-# Compact panel helper
-# ======================
+
 def panel(title: str) -> tuple[QFrame, QVBoxLayout]:
     frame = QFrame()
     frame.setStyleSheet("""
@@ -52,16 +50,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # ======================
-        # Window
-        # ======================
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
         self.setFixedSize(980, 620)
         self.setStyleSheet("background-color:#0b0b0b;")
         self.setWindowIcon(QIcon(resource_path("assets/icon.ico")))
-        # ======================
-        # State
-        # ======================
         self.last_syllable = ""
         self.current_word = ""
         self.waiting_for_enter = False
@@ -72,9 +64,7 @@ class MainWindow(QMainWindow):
         self.used_words = set()
         self.words_tried = []
 
-        # ======================
-        # OCR / Solver
-        # ======================
+
         self.words = load_dictionary("liste_francais.txt")
         self.solver = LetterCoverageSolver(self.words)
 
@@ -88,9 +78,7 @@ class MainWindow(QMainWindow):
 
         keyboard.Listener(on_press=self.on_key_press).start()
 
-        # ======================
-        # Layout
-        # ======================
+
         central = QWidget()
         self.setCentralWidget(central)
 
@@ -98,9 +86,7 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(8, 8, 8, 8)
         root.setSpacing(10)
 
-        # ======================
-        # MAIN COLUMN
-        # ======================
+
         main = QVBoxLayout()
         main.setSpacing(8)
 
@@ -157,7 +143,7 @@ class MainWindow(QMainWindow):
             padding:4px;
         """)
 
-        # Footer version
+
         footer = QLabel(f"{APP_NAME} {APP_VERSION}")
         footer.setAlignment(Qt.AlignLeft)
         footer.setStyleSheet("font-size:10px;color:#555;")
@@ -169,9 +155,6 @@ class MainWindow(QMainWindow):
         main.addStretch()
         main.addWidget(footer)
 
-        # ======================
-        # SIDE CONTROLS
-        # ======================
         side = QVBoxLayout()
         side.setSpacing(8)
 
@@ -216,16 +199,12 @@ class MainWindow(QMainWindow):
         root.addLayout(main, 3)
         root.addLayout(side, 1)
 
-        # ======================
-        # OCR Timer
-        # ======================
+
         self.ocr_timer = QTimer()
         self.ocr_timer.setInterval(700)
         self.ocr_timer.timeout.connect(self.run_ocr)
 
-        # ======================
-        # Events
-        # ======================
+
         self.btn_detect.clicked.connect(self.toggle_detection)
         self.btn_auto.clicked.connect(self.toggle_auto_typing)
         self.btn_overlay.clicked.connect(self.toggle_overlay)
@@ -236,9 +215,7 @@ class MainWindow(QMainWindow):
         self.update_letters_ui()
 
 
-    # ======================
-    # 🔑 CRUCIAL : runtime start
-    # ======================
+
     def start_runtime_services(self):
         QTimer.singleShot(500, self._start_keyboard_listener)
 
@@ -249,9 +226,7 @@ class MainWindow(QMainWindow):
         )
         self.keyboard_listener.start()
 
-    # ======================
-    # Keyboard
-    # ======================
+
     def on_key_press(self, key):
         from pynput import keyboard
 
@@ -265,9 +240,7 @@ class MainWindow(QMainWindow):
             if self.waiting_for_enter:
                 self.validate_word()
 
-    # ======================
-    # OCR logic
-    # ======================
+
     def run_ocr(self):
         if self.ocr_worker and self.ocr_worker.isRunning():
             return
@@ -341,9 +314,7 @@ class MainWindow(QMainWindow):
         self.current_word = ""
         self.update_letters_ui()
 
-    # ======================
-    # UI helpers
-    # ======================
+
     def update_letters_ui(self):
         self.checked_label.setText("Checked: " + " ".join(sorted(self.checked_letters)))
         self.unchecked_label.setText("Remaining: " + " ".join(sorted(self.unchecked_letters)))
@@ -357,10 +328,6 @@ class MainWindow(QMainWindow):
     def count_matching_words(self, syllable: str) -> int:
         return sum(1 for w in self.words if syllable in w)
     
-
-    # ======================
-    # BUTTON ACTIONS (FIX)
-    # ======================
     def toggle_detection(self):
         self.detecting = not self.detecting
         if self.detecting:

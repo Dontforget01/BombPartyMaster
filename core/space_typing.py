@@ -6,7 +6,7 @@ class SpaceTyper:
         self.word = ""
         self.index = 0
         self.active = False
-        self.synced = False  # 🔑 synchronisation mot/espace
+        self.synced = False
         self.controller = keyboard.Controller()
         self.listener = None
 
@@ -16,7 +16,7 @@ class SpaceTyper:
         """
         self.word = word
         self.index = 0
-        self.synced = True  # prêt à consommer le prochain ESPACE
+        self.synced = True
 
     def start(self):
         if self.listener:
@@ -43,7 +43,7 @@ class SpaceTyper:
         try:
             if key == keyboard.Key.space:
                 self.type_next_letter()
-                return False  # bloque l'espace
+                return False
         except Exception:
             pass
 
@@ -52,7 +52,6 @@ class SpaceTyper:
             self.controller.type(self.word[self.index])
             self.index += 1
         else:
-            # mot fini → ENTER
             self.controller.press(keyboard.Key.enter)
             self.controller.release(keyboard.Key.enter)
-            self.synced = False  # attendre un NOUVEAU mot
+            self.synced = False

@@ -33,21 +33,16 @@ class SelectionOverlay(QWidget):
 
         self.showFullScreen()
 
-    # ======================
-    # Keyboard
-    # ======================
     def on_key_press(self, key):
         try:
             if key.char == "*":
                 x, y = pyautogui.position()
                 pos = QPoint(x, y)
 
-                # 1er appui -> coin haut-gauche
                 if self.start_point is None:
                     self.start_point = pos
                     self.end_point = None
                     self.rect = None
-                # 2e appui -> coin bas-droit
                 else:
                     self.end_point = pos
                     self.create_rect()
@@ -56,9 +51,7 @@ class SelectionOverlay(QWidget):
         except Exception:
             pass
 
-    # ======================
-    # Rect logic
-    # ======================
+
     def create_rect(self):
         if not self.start_point or not self.end_point:
             return
@@ -86,9 +79,6 @@ class SelectionOverlay(QWidget):
             "height": self.rect.height(),
         }
 
-    # ======================
-    # Paint
-    # ======================
     def paintEvent(self, event):
         if not self.rect:
             return
@@ -98,9 +88,7 @@ class SelectionOverlay(QWidget):
         painter.setPen(pen)
         painter.drawRect(self.rect)
 
-    # ======================
-    # Cleanup
-    # ======================
+
     def closeEvent(self, event):
         if self.listener:
             self.listener.stop()
