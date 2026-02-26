@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFrame, QDialog, QTextEdit
+    QLabel, QPushButton, QFrame, QDialog, QTextEdit, QComboBox
 )
 from PySide6.QtCore import Qt, QTimer
 from pynput import keyboard
@@ -12,11 +12,14 @@ from core.dictionary import load_dictionary
 from core.solver import LetterCoverageSolver, GAME_ALPHABET
 from core.typing_worker import TypingWorker
 from ui.selection_overlay import SelectionOverlay
-# ======================
-# App info
-# ======================
+
 APP_NAME = "Bomb Party Master"
 APP_VERSION = "v0.1"
+
+LANGUAGES = {
+    "Français": "liste_francais.txt",
+    "English": "liste_anglais.txt"
+}
 
 
 def resource_path(relative_path: str) -> str:
@@ -54,18 +57,19 @@ class MainWindow(QMainWindow):
         self.setFixedSize(980, 620)
         self.setStyleSheet("background-color:#0b0b0b;")
         self.setWindowIcon(QIcon(resource_path("assets/icon.ico")))
+
         self.last_syllable = ""
         self.current_word = ""
         self.waiting_for_enter = False
         self.waiting_to_type = False
-        
+
         self.checked_letters = set()
         self.unchecked_letters = GAME_ALPHABET.copy()
         self.used_words = set()
         self.words_tried = []
 
-
-        self.words = load_dictionary("liste_francais.txt")
+        self.current_language = "Français"
+        self.words = load_dictionary(LANGUAGES[self.current_language])
         self.solver = LetterCoverageSolver(self.words)
 
         self.ocr_worker = None
@@ -78,14 +82,12 @@ class MainWindow(QMainWindow):
 
         keyboard.Listener(on_press=self.on_key_press).start()
 
-
         central = QWidget()
         self.setCentralWidget(central)
 
         root = QHBoxLayout(central)
         root.setContentsMargins(8, 8, 8, 8)
         root.setSpacing(10)
-
 
         main = QVBoxLayout()
         main.setSpacing(8)
@@ -115,12 +117,14 @@ class MainWindow(QMainWindow):
         self.unchecked_label = QLabel()
         self.stats_label = QLabel()
         self.matches_label = QLabel("Matches: —")
+        self.language_info_label = QLabel(f"Language: {self.current_language}")
 
         for lbl in (
             self.checked_label,
             self.unchecked_label,
             self.stats_label,
             self.matches_label,
+            self.language_info_label,
         ):
             lbl.setStyleSheet("font-size:11px;color:#ccc;")
 
@@ -129,6 +133,7 @@ class MainWindow(QMainWindow):
         lay_ls.addWidget(self.unchecked_label)
         lay_ls.addWidget(self.stats_label)
         lay_ls.addWidget(self.matches_label)
+        lay_ls.addWidget(self.language_info_label)
 
         self.history_label = QLabel("History: —")
         self.history_label.setStyleSheet("font-size:11px;color:#999;")
@@ -142,7 +147,6 @@ class MainWindow(QMainWindow):
             color:#888;
             padding:4px;
         """)
-
 
         footer = QLabel(f"{APP_NAME} {APP_VERSION}")
         footer.setAlignment(Qt.AlignLeft)
@@ -184,6 +188,31 @@ class MainWindow(QMainWindow):
         self.btn_reset_words = btn("RESET WORDS")
         self.btn_help = btn("HELP")
 
+        self.lang_title = QLabel("LANGUAGE")
+        self.lang_title.setStyleSheet("color:#777;font-size:10px;")
+
+        self.lang_combo = QComboBox()
+        self.lang_combo.addItems(LANGUAGES.keys())
+        self.lang_combo.setCurrentText(self.current_language)
+        self.lang_combo.setStyleSheet("""
+            QComboBox {
+                background:#151515;
+                color:#ddd;
+                border:1px solid #2f2f2f;
+                border-radius:6px;
+                font-size:11px;
+                padding:6px;
+                min-height:32px;
+            }
+            QComboBox:hover {
+                background:#1f1f1f;
+                border-color:#4da3ff;
+            }
+            QComboBox::drop-down {
+                border:none;
+            }
+        """)
+
         for b in (
             self.btn_detect,
             self.btn_auto,
@@ -194,16 +223,16 @@ class MainWindow(QMainWindow):
         ):
             side.addWidget(b)
 
+        side.addWidget(self.lang_title)
+        side.addWidget(self.lang_combo)
         side.addStretch()
 
         root.addLayout(main, 3)
         root.addLayout(side, 1)
 
-
         self.ocr_timer = QTimer()
         self.ocr_timer.setInterval(700)
         self.ocr_timer.timeout.connect(self.run_ocr)
-
 
         self.btn_detect.clicked.connect(self.toggle_detection)
         self.btn_auto.clicked.connect(self.toggle_auto_typing)
@@ -211,10 +240,9 @@ class MainWindow(QMainWindow):
         self.btn_reset.clicked.connect(self.reset_checked_letters)
         self.btn_reset_words.clicked.connect(self.reset_used_words)
         self.btn_help.clicked.connect(self.show_help)
+        self.lang_combo.currentTextChanged.connect(self.change_language)
 
         self.update_letters_ui()
-
-
 
     def start_runtime_services(self):
         QTimer.singleShot(500, self._start_keyboard_listener)
@@ -225,7 +253,6 @@ class MainWindow(QMainWindow):
             on_press=self.on_key_press
         )
         self.keyboard_listener.start()
-
 
     def on_key_press(self, key):
         from pynput import keyboard
@@ -239,7 +266,6 @@ class MainWindow(QMainWindow):
         elif key == keyboard.Key.enter:
             if self.waiting_for_enter:
                 self.validate_word()
-
 
     def run_ocr(self):
         if self.ocr_worker and self.ocr_worker.isRunning():
@@ -264,16 +290,16 @@ class MainWindow(QMainWindow):
         self.words_tried.clear()
         self.syllable_label.setText(syllable)
         self.syllable_label.setStyleSheet("""
-        font-size:52px;
-        font-weight:900;
-        color:#f1c40f;
-        letter-spacing:3px;
-    """)
+            font-size:52px;
+            font-weight:900;
+            color:#f1c40f;
+            letter-spacing:3px;
+        """)
         self.word_label.setStyleSheet("""
-        font-size:24px;
-        font-weight:600;
-        color:#4da3ff;
-    """)
+            font-size:24px;
+            font-weight:600;
+            color:#4da3ff;
+        """)
 
         match_count = self.count_matching_words(syllable)
         self.matches_label.setText(f"Matches: {match_count}")
@@ -312,12 +338,14 @@ class MainWindow(QMainWindow):
         self.checked_letters |= letters
         self.unchecked_letters -= letters
         self.current_word = ""
+        self.waiting_for_enter = False
+        self.waiting_to_type = False
         self.update_letters_ui()
-
 
     def update_letters_ui(self):
         self.checked_label.setText("Checked: " + " ".join(sorted(self.checked_letters)))
         self.unchecked_label.setText("Remaining: " + " ".join(sorted(self.unchecked_letters)))
+        self.language_info_label.setText(f"Language: {self.current_language}")
         self.update_stats()
 
     def update_stats(self):
@@ -327,7 +355,27 @@ class MainWindow(QMainWindow):
 
     def count_matching_words(self, syllable: str) -> int:
         return sum(1 for w in self.words if syllable in w)
-    
+
+    def change_language(self, language: str):
+        self.current_language = language
+        self.words = load_dictionary(LANGUAGES[language])
+        self.solver = LetterCoverageSolver(self.words)
+
+        self.last_syllable = ""
+        self.current_word = ""
+        self.words_tried.clear()
+        self.used_words.clear()
+        self.checked_letters.clear()
+        self.unchecked_letters = GAME_ALPHABET.copy()
+
+        self.syllable_label.setText("—")
+        self.word_label.setText("—")
+        self.matches_label.setText("Matches: —")
+        self.history_label.setText("History: —")
+        self.status_label.setText(f"[LANG] {language} loaded")
+
+        self.update_letters_ui()
+
     def toggle_detection(self):
         self.detecting = not self.detecting
         if self.detecting:
@@ -364,6 +412,9 @@ class MainWindow(QMainWindow):
 
     def reset_used_words(self):
         self.used_words.clear()
+        self.words_tried.clear()
+        self.history_label.setText("History: —")
+        self.update_stats()
         self.status_label.setText("[RESET] Words")
 
     def show_help(self):
@@ -380,10 +431,11 @@ SPACE  → auto type
 ENTER  → validate
 ESC    → skip
 
-OCR        → enable scan
-AUTO TYPE → enable typing
-OCR ZONE  → select screen
-RESET     → reset state
+OCR         → enable scan
+AUTO TYPE   → enable typing
+OCR ZONE    → select screen
+RESET       → reset state
+LANGUAGE    → choose dictionary
         """)
 
         l = QVBoxLayout(d)
